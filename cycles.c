@@ -62,8 +62,7 @@ void checkBubble(int registerInput){
 
 // load new values to array, requires function type and output
 // also does stalls when appropriate
-void startFunction(int instr,int outputReg){
-    int readyAt;
+void addToPipeline(int readyAt,int outputReg){
     
     // if flushing, then flush
     /*
@@ -86,25 +85,7 @@ void startFunction(int instr,int outputReg){
          
          For simplicity, let’s assume that trap instructions follow the same timing as add instructions. The trap 0x01 instruction reads register rs and the trap 0x05 instruction writes register rt.
          */
-        /* TODO: need to actually have a switch, since the OP codes are same for mult and div*/
-        switch (opcode) {
-            case 0x00/* mult */:
-                readyAt = 3; // double check this
-                break;
-            case 0x00/* div */:
-                readyAt = 5; // double check this
-                break;
-            case 0x1a/* lw */:
-                readyAt = 4; // double check this
-                break;
-            case 0x23/* jal */:
-                readyAt = 1; // double check this
-                break;
-                
-            default:
-                readyAt = 2;
-                break;
-        }
+        // switch is redundant due to where the function is called.
         destReg[0]=outputReg;
         whenAvail[0]=readyAt;
     }
