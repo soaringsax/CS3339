@@ -13,6 +13,7 @@ static int mem[MEMSIZE / 4];
 // expected values
 //int cycles=728752,bubbles=253239,flushes=25995;
 int cycles=5,bubbles=0,flushes=0;
+bool flush=false;
 
 //if any, is the destination of the instructions in the pipeline.
 int destReg[6];
@@ -52,7 +53,7 @@ void checkBubble(int registerInput){
         // while bubble is needed
         while(stallsNeeded>0){
             // blow bubbles
-            bubble++;
+            bubbles++;
             increment();
             stallsNeeded--;
         }
@@ -62,11 +63,12 @@ void checkBubble(int registerInput){
 
 
 // adds when registers will have valid results to the pipeline
-// also does stalls when appropriate
+// also does stalls when needed
 void addToPipeline(int readyAt,int outputReg){
+    //  IF ID EX MEM1 MEM2 WB
     
-    // if flushing, then flush
-    /*
+    /* if flushing, then flush
+     
      The jr, j, and jal instructions are always followed by one flush cycle (stall). The beq and bne instructions are followed by one flush cycle only if they are taken.
      */
     if (flush){
@@ -75,21 +77,15 @@ void addToPipeline(int readyAt,int outputReg){
         for (int i=0;i<6;i++)
             increment();
     }
-    // add to pipeline
     
-    /*
-     IF ID EX MEM1 MEM2 WB
-     */
-    
-    /*
+    /* add to pipeline
      Instruction results become available at the end of the respective stage. Most results become available in the EX stage, except mult, which becomes available in MEM1, div, which become available in WB (i.e., it cannot be forwarded), lw, whose result becomes available in MEM2, and jal, whose result becomes available in ID.
      
      For simplicity, let’s assume that trap instructions follow the same timing as add instructions. The trap 0x01 instruction reads register rs and the trap 0x05 instruction writes register rt.
      */
-    // switch is redundant due to where the function is called.
     destReg[0]=outputReg;
     whenAvail[0]=readyAt;
-    
+    printf("register: %s available at %d",outputReg,readyAt);
     
 }// addToPipeline(2,rd);
 
@@ -145,8 +141,6 @@ static void Interpret(int start)
     int cont = 1, count = 0, i;
     long long wide;
     
-    bool flush=false;
-    
     lo = hi = 0;
     pc = start;
     for (i = 1; i < 32; i++) reg[i] = 0;
@@ -155,17 +149,7 @@ static void Interpret(int start)
     
     
     while (cont) {
-        /*
-         add funtion{actually the return time of the function} AND requested register to pipeline
-         in pipeline, if flush, then stall 6 times
-         if need to bubble, just stall once
-         increment each time
-         
-         
-         increment();
-         Pipeline(opcode, register);// need to pass this function the register it's accessing
-         */
-        
+        increment();// increment counter
         count++;
         instr = Fetch(pc);
         pc += 4;
@@ -186,15 +170,20 @@ static void Interpret(int start)
             case 0x00:
                 switch (funct) {
                     case 0x00: /* sll */ reg[rd] = reg[rs] << shamt;
-                        checkBubble(rs); addToPipeline(2,rd); break;//R[rd]=R[rs]≪shamt
+                        checkBubble(rs); addToPipeline(2,rd);
+                        break;//R[rd]=R[rs]≪shamt
                     case 0x03: /* sra */ reg[rd] = reg[rs] >> shamt;
-                        checkBubble(rs); addToPipeline(2,rd); break;// R[rd]=R[rs]≫>shamt
+                        checkBubble(rs); addToPipeline(2,rd);
+                        break;// R[rd]=R[rs]≫>shamt
                     case 0x08: /* jr */ pc = reg[rs]; flush=true;
-                        checkBubble(rs); addToPipeline(2,CONSTPC); break;// PC=R[rs]
+                        checkBubble(rs); addToPipeline(2,CONSTPC);
+                        break;// PC=R[rs]
                     case 0x10: /* mfhi */ reg[rd] = hi;
-                        checkBubble(CONSTHILO); addToPipeline(2,rd); break;// R[rd]=Hi
+                        checkBubble(CONSTHILO); addToPipeline(2,rd);
+                        break;// R[rd]=Hi
                     case 0x12: /* mflo */ reg[rd] = lo;
-                        checkBubble(CONSTHILO); addToPipeline(2,rd); break;// R[rd]=Lo
+                        checkBubble(CONSTHILO); addToPipeline(2,rd);
+                        break;// R[rd]=Lo
                     case 0x18: /* mult */ wide = reg[rs]; wide *= reg[rt]; lo = wide & 0xffffffff; hi = wide >> 32;
                         checkBubble(rs); checkBubble(rt); addToPipeline(3,CONSTHILO); break;
                     case 0x1a: /* div */ if (reg[rt] == 0) {fprintf(stderr, "division by zero: pc = 0x%x\n", pc - 4); cont = 0;} else {lo = reg[rs] / reg[rt]; hi = reg[rs] % reg[rt];}
