@@ -45,8 +45,7 @@ void checkBubble(int registerInput){
      stalls needed is the differencebetween current location in pipeline and needed location in pipeline
      
      */
-    
-    
+    while()
     
     // while bubble is needed
     while(stallsNeeded>0){
