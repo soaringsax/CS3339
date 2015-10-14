@@ -45,7 +45,14 @@ void checkBubble(int registerInput){
      stalls needed is the differencebetween current location in pipeline and needed location in pipeline
      
      */
-    while()
+     //for loop goes through each set
+    for(int i=0; i<6;i++){
+        if(whenAvail[i]==i)
+        {
+            stallsNeeded++;
+            //would checking for flushes be useful here?
+        }
+    }
     
     // while bubble is needed
     while(stallsNeeded>0){
