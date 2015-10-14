@@ -9,7 +9,7 @@ static int mem[MEMSIZE / 4];
 
 // expected values
 //int cycles=728752,bubbles=253239,flushes=25995;
-int cycles=0,bubbles=0,flushes=0;
+int cycles=5,bubbles=0,flushes=0;
 
 //if any, is the destination of the instructions in the pipeline.
 int destReg[6];
@@ -20,6 +20,7 @@ int whenAvail[6];
 
 // move processes one step forward
 void increment(){
+    cycles++;
     // move all things foward in arrays
     for(int i=0;i<5; i++) {
         destReg[i+1]=destReg[i];
@@ -31,13 +32,28 @@ void increment(){
     whenAvail[0]=-1;
 }
 
-// check if bubble is needed, requres function inputs
-void checkBubble(int registerInputs){
+// check if bubble is needed, requres function input
+void checkBubble(int registerInput){
+    int stallsNeeded=0;
+    // a bubble is needed when
+    // register input requried for a function is not ready yet
+    
+    /*
+    Most instructions need their inputs in the EX stage, except jr, beq, and bne, which need them already in the ID stage, and the second sw input, which is only needed in the MEM1 stage (the base register is still needed in EX)
+     
+     
+     stalls needed is the differencebetween current location in pipeline and needed location in pipeline
+     
+     */
+    
+    
     
     // while bubble is needed
-    while(){
+    while(stallsNeeded>0){
+        // blow bubbles
         bubble++;
         increment();
+        stallsNeeded--;
     }
     
 }
@@ -46,20 +62,43 @@ void checkBubble(int registerInputs){
 
 // load new values to array, requires function type and output
 // also does stalls when appropriate
-startFunction(int opcode,int outputReg){
+void startFunction(int instr,int outputReg){
     int readyAt;
     
     // if flushing, then flush
+    /*
+     The jr, j, and jal instructions are always followed by one flush cycle (stall). The beq and bne instructions are followed by one flush cycle only if they are taken.
+     */
     if (flush){
+        flush=false;
         flushes++;
         for (int i=0;i<6;i++)
             increment();
     }
     // else add to array
     else{
+        /*
+         IF ID EX MEM1 MEM2 WB
+         */
+        
+        /*
+         Instruction results become available at the end of the respective stage. Most results become available in the EX stage, except mult, which becomes available in MEM1, div, which become available in WB (i.e., it cannot be forwarded), lw, whose result becomes available in MEM2, and jal, whose result becomes available in ID.
+         
+         For simplicity, let’s assume that trap instructions follow the same timing as add instructions. The trap 0x01 instruction reads register rs and the trap 0x05 instruction writes register rt.
+         */
+        /* TODO: need to actually have a switch, since the OP codes are same for mult and div*/
         switch (opcode) {
-            case 0x1a/*divide*/:
-                readyAt = 4;
+            case 0x00/* mult */:
+                readyAt = 3; // double check this
+                break;
+            case 0x00/* div */:
+                readyAt = 5; // double check this
+                break;
+            case 0x1a/* lw */:
+                readyAt = 4; // double check this
+                break;
+            case 0x23/* jal */:
+                readyAt = 1; // double check this
                 break;
                 
             default:
@@ -203,6 +242,7 @@ static void Interpret(int start)
             case 0x1a: /* trap */
                 switch (addr & 0xf) {
                     case 0x00: printf("\n"); break;
+                        //The trap 0x01 instruction reads register rs
                     case 0x01: printf(" %d ", reg[rs]); break;
                     case 0x05: printf("\n? "); fflush(stdout); scanf("%d", &reg[rt]); break;
                     case 0x0a: cont = 0; break;
