@@ -10,7 +10,16 @@ static int mem[MEMSIZE / 4];
 int destReg[6];
 
 // The other array records, for each instruction in the pipeline, in which stage it generates its result (treat $hi and $lo as a single register since they are always written together).
-int results[6];
+int whenAvail[6];
+
+
+void increment(){
+    // move all things foward in arrays
+    for(int i=0;i<5; i++) {
+        destReg[i+1]=destReg[i];
+        whenAvail[i+1]=whenAvail[i];
+    }
+}
 
 static int Convert(unsigned int x)
 {
@@ -63,13 +72,27 @@ static void Interpret(int start)
     int cont = 1, count = 0, i,cycles=728752,bubbles=253239,flushes=25995;
     long long wide;
     
+    bool flush=false;
+    
     lo = hi = 0;
     pc = start;
     for (i = 1; i < 32; i++) reg[i] = 0;
     reg[28] = 0x10008000;  // gp
     reg[29] = 0x10000000 + MEMSIZE;  // sp
     
+    
     while (cont) {
+        /*
+         add funtion{actually the return time of the function} AND requested register to pipeline
+         in pipeline, if flush, then stall 6 times
+         if need to bubble, just stall once
+         increment each time
+         
+         */
+        increment();
+        Pipeline(opcode/*, register*/);// need to pass this function the register it's accessing
+        
+        
         count++;
         instr = Fetch(pc);
         pc += 4;
@@ -85,12 +108,13 @@ static void Interpret(int start)
         simm = ((signed)uimm << 16) >> 16;
         addr = instr & 0x3ffffff;
         
+        
         switch (opcode) {
             case 0x00:
                 switch (funct) {
                     case 0x00: /* sll */ reg[rd] = reg[rs] << shamt; break;//R[rd]=R[rs]≪shamt
                     case 0x03: /* sra */ reg[rd] = reg[rs] >> shamt; break;// R[rd]=R[rs]≫>shamt
-                    case 0x08: /* jr */ pc = reg[rs]; break;// PC=R[rs]
+                    case 0x08: /* jr */ pc = reg[rs]; flush=true; break;// PC=R[rs]
                     case 0x10: /* mfhi */ reg[rd] = hi; break;// R[rd]=Hi
                     case 0x12: /* mflo */ reg[rd] = lo; break;// R[rd]=Lo
                     case 0x18: /* mult */ wide = reg[rs]; wide *= reg[rt]; lo = wide & 0xffffffff; hi = wide >> 32; break;
@@ -105,16 +129,20 @@ static void Interpret(int start)
                     default: fprintf(stderr, "unimplemented instruction: pc = 0x%x\n", pc - 4); cont = 0;
                 }
                 break;
-            case 0x02: /* j */ pc = (pc & 0xf0000000) + addr*4; break;// PC=JumpAddr
-            case 0x03: /* jal */ reg[31] = pc; pc = (pc & 0xf0000000) + addr * 4; break;// R[31]=PC+4; PC=JumpAddr
+            case 0x02: /* j */ pc = (pc & 0xf0000000) + addr*4;flush=true;  break;// PC=JumpAddr
+            case 0x03: /* jal */ reg[31] = pc; pc = (pc & 0xf0000000) + addr * 4; flush=true; break;// R[31]=PC+4; PC=JumpAddr
             case 0x04: /* beq */
-                if(reg[rs]==reg[rt])
+                if(reg[rs]==reg[rt]){
                     pc=pc+(simm<<2);
+                    flush=true;
+                }
                 //else pc;
                 break;// if(R[rs]==R[rt]) PC=PC+4+BranchAddr
             case 0x05: /* bne */
-                if(reg[rs]!=reg[rt])
+                if(reg[rs]!=reg[rt]){
                     pc=pc+(simm<<2);
+                    flush=true;
+                }
                 //else pc;
                 break;// TODO if(R[rs]!=R[rt]) PC=PC+4+BranchAddr
             case 0x09: /* addiu */ reg[rt] = reg[rs] + simm; break;// R[rt]=R[rs]+UnsignExtImm
@@ -136,9 +164,9 @@ static void Interpret(int start)
     }
     
     printf("\nprogram finished at pc = 0x%x (%d instructions executed)\n", pc, count);
-    printf("cycles = %d\n",cycles); 
-    printf("bubbles = %d\n",bubbles); 
-    printf("flushes = %d\n",flushes); 
+    printf("cycles = %d\n",cycles);
+    printf("bubbles = %d\n",bubbles);
+    printf("flushes = %d\n",flushes);
     
     if(count == (cycles - 5 - bubbles - flushes)){
         printf("Check passed\n");
