@@ -39,28 +39,27 @@ void checkBubble(int registerInput){
     // register input requried for a function is not ready yet
     
     /*
-    Most instructions need their inputs in the EX stage, except jr, beq, and bne, which need them already in the ID stage, and the second sw input, which is only needed in the MEM1 stage (the base register is still needed in EX)
+     Most instructions need their inputs in the EX stage, except jr, beq, and bne, which need them already in the ID stage, and the second sw input, which is only needed in the MEM1 stage (the base register is still needed in EX)
      
      
      stalls needed is the differencebetween current location in pipeline and needed location in pipeline
      
      */
-    
-    
-    
-    // while bubble is needed
-    while(stallsNeeded>0){
-        // blow bubbles
-        bubble++;
-        increment();
-        stallsNeeded--;
-    }
+    while()
+        
+        // while bubble is needed
+        while(stallsNeeded>0){
+            // blow bubbles
+            bubble++;
+            increment();
+            stallsNeeded--;
+        }
     
 }
 
 
 
-// load new values to array, requires function type and output
+// adds when registers will have valid results to the pipeline
 // also does stalls when appropriate
 void addToPipeline(int readyAt,int outputReg){
     
@@ -75,22 +74,22 @@ void addToPipeline(int readyAt,int outputReg){
             increment();
     }
     // else add to array
-    else{
-        /*
-         IF ID EX MEM1 MEM2 WB
-         */
-        
-        /*
-         Instruction results become available at the end of the respective stage. Most results become available in the EX stage, except mult, which becomes available in MEM1, div, which become available in WB (i.e., it cannot be forwarded), lw, whose result becomes available in MEM2, and jal, whose result becomes available in ID.
-         
-         For simplicity, let’s assume that trap instructions follow the same timing as add instructions. The trap 0x01 instruction reads register rs and the trap 0x05 instruction writes register rt.
-         */
-        // switch is redundant due to where the function is called.
-        destReg[0]=outputReg;
-        whenAvail[0]=readyAt;
-    }
     
-}
+    /*
+     IF ID EX MEM1 MEM2 WB
+     */
+    
+    /*
+     Instruction results become available at the end of the respective stage. Most results become available in the EX stage, except mult, which becomes available in MEM1, div, which become available in WB (i.e., it cannot be forwarded), lw, whose result becomes available in MEM2, and jal, whose result becomes available in ID.
+     
+     For simplicity, let’s assume that trap instructions follow the same timing as add instructions. The trap 0x01 instruction reads register rs and the trap 0x05 instruction writes register rt.
+     */
+    // switch is redundant due to where the function is called.
+    destReg[0]=outputReg;
+    whenAvail[0]=readyAt;
+    
+    
+}// addToPipeline(2,rd);
 
 
 static int Convert(unsigned int x)
@@ -161,9 +160,9 @@ static void Interpret(int start)
          increment each time
          
          
-        increment();
-        Pipeline(opcode, register);// need to pass this function the register it's accessing
-        */
+         increment();
+         Pipeline(opcode, register);// need to pass this function the register it's accessing
+         */
         
         count++;
         instr = Fetch(pc);
@@ -184,54 +183,67 @@ static void Interpret(int start)
         switch (opcode) {
             case 0x00:
                 switch (funct) {
-                    case 0x00: /* sll */ reg[rd] = reg[rs] << shamt; break;//R[rd]=R[rs]≪shamt
-                    case 0x03: /* sra */ reg[rd] = reg[rs] >> shamt; break;// R[rd]=R[rs]≫>shamt
-                    case 0x08: /* jr */ pc = reg[rs]; flush=true; break;// PC=R[rs]
-                    case 0x10: /* mfhi */ reg[rd] = hi; break;// R[rd]=Hi
-                    case 0x12: /* mflo */ reg[rd] = lo; break;// R[rd]=Lo
-                    case 0x18: /* mult */ wide = reg[rs]; wide *= reg[rt]; lo = wide & 0xffffffff; hi = wide >> 32; break;
-                    case 0x1a: /* div */ if (reg[rt] == 0) {fprintf(stderr, "division by zero: pc = 0x%x\n", pc - 4); cont = 0;} else {lo = reg[rs] / reg[rt]; hi = reg[rs] % reg[rt];} break;
-                    case 0x21: /* addu */ reg[rd] = reg[rs] + reg[rt]; break;// R[rd]=R[rs]+R[rt]
-                    case 0x23: /* subu */ reg[rd] = reg[rs] - reg[rt]; break;// R[rd]=R[rs]-R[rt]
+                    case 0x00: /* sll */ reg[rd] = reg[rs] << shamt;
+                        addToPipeline(2,rd); break;//R[rd]=R[rs]≪shamt
+                    case 0x03: /* sra */ reg[rd] = reg[rs] >> shamt;
+                        addToPipeline(2,rd); break;// R[rd]=R[rs]≫>shamt
+                    case 0x08: /* jr */ pc = reg[rs]; flush=true;
+                        addToPipeline(2,CONSTPC); break;// PC=R[rs]
+                    case 0x10: /* mfhi */ reg[rd] = hi;
+                        addToPipeline(2,rd); break;// R[rd]=Hi
+                    case 0x12: /* mflo */ reg[rd] = lo;
+                        addToPipeline(2,rd); break;// R[rd]=Lo
+                    case 0x18: /* mult */ wide = reg[rs]; wide *= reg[rt]; lo = wide & 0xffffffff; hi = wide >> 32;
+                        addToPipeline(3,CONSTHILO); break;
+                    case 0x1a: /* div */ if (reg[rt] == 0) {fprintf(stderr, "division by zero: pc = 0x%x\n", pc - 4); cont = 0;} else {lo = reg[rs] / reg[rt]; hi = reg[rs] % reg[rt];}
+                        addToPipeline(5,CONSTHILO); break;
+                    case 0x21: /* addu */ reg[rd] = reg[rs] + reg[rt];
+                        addToPipeline(2,rd); break;// R[rd]=R[rs]+R[rt]
+                    case 0x23: /* subu */ reg[rd] = reg[rs] - reg[rt];
+                        addToPipeline(2,rd); break;// R[rd]=R[rs]-R[rt]
                     case 0x2a: /* slt */
                         if(reg[rs]<reg[rt])
                             reg[rd]=1;
                         else reg[rd]=0;
-                        break;// R[rd]=(R[rs]<R[rt])?1:0
+                        addToPipeline(2,rd); break;// R[rd]=(R[rs]<R[rt])?1:0
                     default: fprintf(stderr, "unimplemented instruction: pc = 0x%x\n", pc - 4); cont = 0;
                 }
                 break;
-            case 0x02: /* j */ pc = (pc & 0xf0000000) + addr*4;flush=true;  break;// PC=JumpAddr
-            case 0x03: /* jal */ reg[31] = pc; pc = (pc & 0xf0000000) + addr * 4; flush=true; break;// R[31]=PC+4; PC=JumpAddr
+            case 0x02: /* j */ pc = (pc & 0xf0000000) + addr*4;
+                flush=true; addToPipeline(2,CONSTPC) ;break;// PC=JumpAddr
+            case 0x03: /* jal */ reg[31] = pc; pc = (pc & 0xf0000000) + addr * 4;
+                flush=true; addToPipeline(1,31); break;// R[31]=PC+4; PC=JumpAddr
             case 0x04: /* beq */
                 if(reg[rs]==reg[rt]){
                     pc=pc+(simm<<2);
                     flush=true;
                 }
-                //else pc;
-                break;// if(R[rs]==R[rt]) PC=PC+4+BranchAddr
+                addToPipeline(2,CONSTPC); break;// if(R[rs]==R[rt]) PC=PC+4+BranchAddr
             case 0x05: /* bne */
                 if(reg[rs]!=reg[rt]){
                     pc=pc+(simm<<2);
                     flush=true;
                 }
-                //else pc;
-                break;// TODO if(R[rs]!=R[rt]) PC=PC+4+BranchAddr
-            case 0x09: /* addiu */ reg[rt] = reg[rs] + simm; break;// R[rt]=R[rs]+UnsignExtImm
-            case 0x0c: /* andi */ reg[rt] = reg[rs] & uimm; break;// R[rt]=R[rs]&ZeroExtImm
-            case 0x0f: /* lui */ reg[rt]= simm <<16; break; // R[rt]={imm,16’b0}
+                addToPipeline(2,CONSTPC); break;// TODO if(R[rs]!=R[rt]) PC=PC+4+BranchAddr
+            case 0x09: /* addiu */ reg[rt] = reg[rs] + simm;
+                addToPipeline(2,rt); break;// R[rt]=R[rs]+UnsignExtImm
+            case 0x0c: /* andi */ reg[rt] = reg[rs] & uimm;
+                addToPipeline(2,rt);break;// R[rt]=R[rs]&ZeroExtImm
+            case 0x0f: /* lui */ reg[rt]= simm <<16;
+                addToPipeline(2,rt);break; // R[rt]={imm,16’b0}
             case 0x1a: /* trap */
                 switch (addr & 0xf) {
                     case 0x00: printf("\n"); break;
                         //The trap 0x01 instruction reads register rs
-                    case 0x01: printf(" %d ", reg[rs]); break;
+                    case 0x01: printf(" %d ", reg[rs]);
+                        addToPipeline(2,rs); break;
                     case 0x05: printf("\n? "); fflush(stdout); scanf("%d", &reg[rt]); break;
                     case 0x0a: cont = 0; break;
                     default: fprintf(stderr, "unimplemented trap: pc = 0x%x\n", pc - 4); cont = 0;
                 }
                 break;
-            case 0x23: /* lw */ reg[rt] = LoadWord(reg[rs]+simm); break;  // call LoadWord function R[rt]=M[R[rs]+SignExtImm]
-            case 0x2b: /* sw */ StoreWord(reg[rt], reg[rs]+simm); break;  // call StoreWord function M[R[rs]+SignExtImm]=R[rt]
+            case 0x23: /* lw */ reg[rt] = LoadWord(reg[rs]+simm); addToPipeline(4,rt); break;  // call LoadWord function R[rt]=M[R[rs]+SignExtImm]
+            case 0x2b: /* sw */ StoreWord(reg[rt], reg[rs]+simm); addToPipeline(2,reg[rs]+simm); break;  // call StoreWord function M[R[rs]+SignExtImm]=R[rt]
             default: fprintf(stderr, "unimplemented instruction: pc = 0x%x\n", pc - 4); cont = 0;
         }
     }
