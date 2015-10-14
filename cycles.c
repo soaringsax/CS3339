@@ -87,20 +87,21 @@ void startFunction(int instr,int outputReg){
          For simplicity, let’s assume that trap instructions follow the same timing as add instructions. The trap 0x01 instruction reads register rs and the trap 0x05 instruction writes register rt.
          */
         /* TODO: need to actually have a switch, since the OP codes are same for mult and div*/
-        switch (opcode) {
-            case 0x00/* mult */:
-                readyAt = 3; // double check this
+        switch (opcode) { //add swtich statement ot allow for us to utilize the funct varible like the interpreter does so that we may  
+            switch(funct){
+                case 0x18:/* mult */:
+                    readyAt = 3; // ready at stage 3:MEM1
+                    break;
+                case 0x1a/* div */:
+                    readyAt = 5; // ready at stage 5:WB *CAN'T BE FORWARDED
+                    break;
+            }
+            case 0x03/* jal */:
+                readyAt = 1; // ready at stage 1: ID
                 break;
-            case 0x00/* div */:
-                readyAt = 5; // double check this
+            case 0x23/* lw */:
+                readyAt = 4; // ready at stage 4:MEM2
                 break;
-            case 0x1a/* lw */:
-                readyAt = 4; // double check this
-                break;
-            case 0x23/* jal */:
-                readyAt = 1; // double check this
-                break;
-                
             default:
                 readyAt = 2;
                 break;
