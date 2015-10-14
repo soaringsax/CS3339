@@ -5,6 +5,11 @@
 
 static int little_endian, icount, *instruction;
 static int mem[MEMSIZE / 4];
+// maintain counts
+
+// expected values
+//int cycles=728752,bubbles=253239,flushes=25995;
+int cycles=0,bubbles=0,flushes=0;
 
 //if any, is the destination of the instructions in the pipeline.
 int destReg[6];
@@ -13,13 +18,60 @@ int destReg[6];
 int whenAvail[6];
 
 
+// move processes one step forward
 void increment(){
     // move all things foward in arrays
     for(int i=0;i<5; i++) {
         destReg[i+1]=destReg[i];
         whenAvail[i+1]=whenAvail[i];
     }
+    
+    // default new values to NOP
+    destReg[0]=-1;
+    whenAvail[0]=-1;
 }
+
+// check if bubble is needed, requres function inputs
+void checkBubble(int registerInputs){
+    
+    // while bubble is needed
+    while(){
+        bubble++;
+        increment();
+    }
+    
+}
+
+
+
+// load new values to array, requires function type and output
+// also does stalls when appropriate
+startFunction(int opcode,int outputReg){
+    int readyAt;
+    
+    // if flushing, then flush
+    if (flush){
+        flushes++;
+        for (int i=0;i<6;i++)
+            increment();
+    }
+    // else add to array
+    else{
+        switch (opcode) {
+            case 0x1a/*divide*/:
+                readyAt = 4;
+                break;
+                
+            default:
+                readyAt = 2;
+                break;
+        }
+        destReg[0]=outputReg;
+        whenAvail[0]=readyAt;
+    }
+    
+}
+
 
 static int Convert(unsigned int x)
 {
@@ -69,7 +121,7 @@ static void Interpret(int start)
     int instr, opcode, rs, rt, rd, shamt, funct, uimm, simm, addr;
     int pc, hi, lo;
     int reg[32];
-    int cont = 1, count = 0, i,cycles=728752,bubbles=253239,flushes=25995;
+    int cont = 1, count = 0, i;
     long long wide;
     
     bool flush=false;
@@ -88,10 +140,10 @@ static void Interpret(int start)
          if need to bubble, just stall once
          increment each time
          
-         */
+         
         increment();
-        Pipeline(opcode/*, register*/);// need to pass this function the register it's accessing
-        
+        Pipeline(opcode, register);// need to pass this function the register it's accessing
+        */
         
         count++;
         instr = Fetch(pc);
