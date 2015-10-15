@@ -77,36 +77,32 @@ void checkBubble(int registerInput){
 
 // adds when registers will have valid results to the pipeline
 // also does stalls when needed
-void addToPipeline(int readyAt,int outputReg){
+/*void addToPipeline(int readyAt,int outputReg){
     //  IF ID EX MEM1 MEM2 WB
     
-    /*if flushing, then flush
+    /* if flushing, then flush
      
      The jr, j, and jal instructions are always followed by one flush cycle (stall). The beq and bne instructions are followed by one flush cycle only if they are taken.
      */
-    int i;
+ /*    int i;
     if (flush){
         flush=0;
         flushes++;
         for (i=0;i<6;i++)
             increment();
     }
-    if(time!=1){
-        increment();
-    }
-    if(
+    
     /* add to pipeline
      Instruction results become available at the end of the respective stage. Most results become available in the EX stage, except mult, which becomes available in MEM1, div, which become available in WB (i.e., it cannot be forwarded), lw, whose result becomes available in MEM2, and jal, whose result becomes available in ID.
      
      For simplicity, let’s assume that trap instructions follow the same timing as add instructions. The trap 0x01 instruction reads register rs and the trap 0x05 instruction writes register rt.
      */
-    destReg[0]=outputReg;//replaces destreg[0] but doesn't move what was there down to destreg[1]
+  /*  destReg[0]=outputReg;
     whenAvail[0]=readyAt;
     printf("register: %s available at %d",outputReg,readyAt);
     
 }// addToPipeline(2,rd);
-
-
+*/
 static int Convert(unsigned int x)
 {
     return (x >> 24) | ((x >> 8) & 0xff00) | ((x << 8) & 0xff0000) | (x << 24);
