@@ -13,7 +13,7 @@ static int mem[MEMSIZE / 4];
 // expected values
 //int cycles=728752,bubbles=253239,flushes=25995;
 int cycles=5,bubbles=0,flushes=0;
-int flush=0;
+int flush=0;//determining if flush is needed
 
 //if any, is the destination of the instructions in the pipeline.
 int destReg[6];
@@ -25,8 +25,9 @@ int whenAvail[6];
 // move processes one step forward
 void increment(){
     cycles++;
+    int i;
     // move all things foward in arrays
-    for(int i=0;i<5; i++) {
+    for(i=0;i<5; i++) {
         destReg[i+1]=destReg[i];
         whenAvail[i+1]=whenAvail[i];
     }
@@ -51,8 +52,9 @@ void checkBubble(int registerInput){
      */
      int found = -1;
      int wanted=registerInput;
-        for(int i=5;i>=0;i--){
-            if(wanted===destreg[i])
+     int i;
+        for(i=5;i>=0;i--){
+            if(wanted==destReg[i])
             {
                 found=i;
                 if(i < whenAvail[i]){
@@ -75,17 +77,18 @@ void checkBubble(int registerInput){
 
 // adds when registers will have valid results to the pipeline
 // also does stalls when needed
-void addToPipeline(int readyAt,int outputReg){
+/*void addToPipeline(int readyAt,int outputReg){
     //  IF ID EX MEM1 MEM2 WB
     
     /* if flushing, then flush
      
      The jr, j, and jal instructions are always followed by one flush cycle (stall). The beq and bne instructions are followed by one flush cycle only if they are taken.
      */
+ /*    int i;
     if (flush){
         flush=0;
         flushes++;
-        for (int i=0;i<6;i++)
+        for (i=0;i<6;i++)
             increment();
     }
     
@@ -94,13 +97,13 @@ void addToPipeline(int readyAt,int outputReg){
      
      For simplicity, let’s assume that trap instructions follow the same timing as add instructions. The trap 0x01 instruction reads register rs and the trap 0x05 instruction writes register rt.
      */
-    destReg[0]=outputReg;
+  /*  destReg[0]=outputReg;
     whenAvail[0]=readyAt;
     printf("register: %s available at %d",outputReg,readyAt);
     
 }// addToPipeline(2,rd);
 
-
+*/
 static int Convert(unsigned int x)
 {
     return (x >> 24) | ((x >> 8) & 0xff00) | ((x << 8) & 0xff0000) | (x << 24);
@@ -181,58 +184,70 @@ static void Interpret(int start)
             case 0x00:
                 switch (funct) {
                     case 0x00: /* sll */ reg[rd] = reg[rs] << shamt;
-                        checkBubble(rs); addToPipeline(2,rd);
+                        checkBubble(rs); //addToPipeline(2,rd);
                         break;//R[rd]=R[rs]≪shamt
                     case 0x03: /* sra */ reg[rd] = reg[rs] >> shamt;
-                        checkBubble(rs); addToPipeline(2,rd);
+                        checkBubble(rs); //addToPipeline(2,rd);
                         break;// R[rd]=R[rs]≫>shamt
                     case 0x08: /* jr */ pc = reg[rs]; flush=1;
-                        checkBubble(rs); addToPipeline(2,CONSTPC);
+                        checkBubble(rs); //addToPipeline(2,CONSTPC);
                         break;// PC=R[rs]
                     case 0x10: /* mfhi */ reg[rd] = hi;
-                        checkBubble(CONSTHILO); addToPipeline(2,rd);
+                        checkBubble(CONSTHILO); //addToPipeline(2,rd);
                         break;// R[rd]=Hi
                     case 0x12: /* mflo */ reg[rd] = lo;
-                        checkBubble(CONSTHILO); addToPipeline(2,rd);
+                        checkBubble(CONSTHILO); //addToPipeline(2,rd);
                         break;// R[rd]=Lo
                     case 0x18: /* mult */ wide = reg[rs]; wide *= reg[rt]; lo = wide & 0xffffffff; hi = wide >> 32;
-                        checkBubble(rs); checkBubble(rt); addToPipeline(3,CONSTHILO); break;
+                        checkBubble(rs); checkBubble(rt); //addToPipeline(3,CONSTHILO); 
+                        break;
                     case 0x1a: /* div */ if (reg[rt] == 0) {fprintf(stderr, "division by zero: pc = 0x%x\n", pc - 4); cont = 0;} else {lo = reg[rs] / reg[rt]; hi = reg[rs] % reg[rt];}
-                        checkBubble(rs); checkBubble(rt); addToPipeline(5,CONSTHILO); break;
+                        checkBubble(rs); checkBubble(rt); //addToPipeline(5,CONSTHILO); 
+                        break;
                     case 0x21: /* addu */ reg[rd] = reg[rs] + reg[rt];
-                        checkBubble(rs); checkBubble(rt); addToPipeline(2,rd); break;// R[rd]=R[rs]+R[rt]
+                        checkBubble(rs); checkBubble(rt); //addToPipeline(2,rd); 
+                        break;// R[rd]=R[rs]+R[rt]
                     case 0x23: /* subu */ reg[rd] = reg[rs] - reg[rt];
-                        checkBubble(rs); checkBubble(rt); addToPipeline(2,rd); break;// R[rd]=R[rs]-R[rt]
+                        checkBubble(rs); checkBubble(rt); //addToPipeline(2,rd); 
+                        break;// R[rd]=R[rs]-R[rt]
                     case 0x2a: /* slt */
                         if(reg[rs]<reg[rt])
                             reg[rd]=1;
                         else reg[rd]=0;
-                        checkBubble(rs); checkBubble(rt); addToPipeline(2,rd); break;// R[rd]=(R[rs]<R[rt])?1:0
+                        checkBubble(rs); checkBubble(rt); //addToPipeline(2,rd); 
+                        break;// R[rd]=(R[rs]<R[rt])?1:0
                     default: fprintf(stderr, "unimplemented instruction: pc = 0x%x\n", pc - 4); cont = 0;
                 }
                 break;
             case 0x02: /* j */ pc = (pc & 0xf0000000) + addr*4;
-                flush=1; addToPipeline(2,CONSTPC) ;break;// PC=JumpAddr
+                flush=1; //addToPipeline(2,CONSTPC) ;
+                break;// PC=JumpAddr
             case 0x03: /* jal */ reg[31] = pc; pc = (pc & 0xf0000000) + addr * 4;
-                flush=1; addToPipeline(1,31); break;// R[31]=PC+4; PC=JumpAddr
+                flush=1; //addToPipeline(1,31); 
+                break;// R[31]=PC+4; PC=JumpAddr
             case 0x04: /* beq */
                 if(reg[rs]==reg[rt]){
                     pc=pc+(simm<<2);
                     flush=1;
                 }
-                addToPipeline(2,CONSTPC); break;// if(R[rs]==R[rt]) PC=PC+4+BranchAddr
+                //addToPipeline(2,CONSTPC);
+                break;// if(R[rs]==R[rt]) PC=PC+4+BranchAddr
             case 0x05: /* bne */
                 if(reg[rs]!=reg[rt]){
                     pc=pc+(simm<<2);
                     flush=1;
                 }
-                checkBubble(rs); checkBubble(rt); addToPipeline(2,CONSTPC); break;// TODO if(R[rs]!=R[rt]) PC=PC+4+BranchAddr
+                checkBubble(rs); checkBubble(rt); //addToPipeline(2,CONSTPC); 
+                break;// TODO if(R[rs]!=R[rt]) PC=PC+4+BranchAddr
             case 0x09: /* addiu */ reg[rt] = reg[rs] + simm;
-               checkBubble(rs);  addToPipeline(2,rt); break;// R[rt]=R[rs]+UnsignExtImm
+               checkBubble(rs);  //addToPipeline(2,rt); 
+               break;// R[rt]=R[rs]+UnsignExtImm
             case 0x0c: /* andi */ reg[rt] = reg[rs] & uimm;
-                checkBubble(rs); addToPipeline(2,rt);break;// R[rt]=R[rs]&ZeroExtImm
+                checkBubble(rs); //addToPipeline(2,rt);
+                break;// R[rt]=R[rs]&ZeroExtImm
             case 0x0f: /* lui */ reg[rt]= simm <<16;
-                addToPipeline(2,rt);break; // R[rt]={imm,16’b0}
+                //addToPipeline(2,rt);
+                break; // R[rt]={imm,16’b0}
             case 0x1a: /* trap */
                 switch (addr & 0xf) {
                     case 0x00: printf("\n"); break;
@@ -245,9 +260,11 @@ static void Interpret(int start)
                 }
                 break;
             case 0x23: /* lw */ reg[rt] = LoadWord(reg[rs]+simm);
-                checkBubble(reg[rs]+simm); addToPipeline(4,rt); break;  // call LoadWord function R[rt]=M[R[rs]+SignExtImm]
+                checkBubble(reg[rs]+simm); //addToPipeline(4,rt); 
+                break;  // call LoadWord function R[rt]=M[R[rs]+SignExtImm]
             case 0x2b: /* sw */ StoreWord(reg[rt], reg[rs]+simm);
-                checkBubble(rt); addToPipeline(2,reg[rs]+simm); break;  // call StoreWord function M[R[rs]+SignExtImm]=R[rt]
+                checkBubble(rt); //addToPipeline(2,reg[rs]+simm); 
+                break;  // call StoreWord function M[R[rs]+SignExtImm]=R[rt]
             default: fprintf(stderr, "unimplemented instruction: pc = 0x%x\n", pc - 4); cont = 0;
         }
     }
