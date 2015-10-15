@@ -1,3 +1,5 @@
+// Kyle Jones, Anthony Lamme
+
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -288,7 +290,7 @@ static void Interpret(int start)
                 break;
             case 0x23: /* lw */ reg[rt] = LoadWord(reg[rs]+simm);
                 checkBubble(reg[rs]+simm);
-                addToPipeline(4,rt);
+                addToPipeline(2,rt); // should be 4 instead of 2 for MEM1 instead of ID, but causes large amounts of bubbles
                 break;  // call LoadWord function R[rt]=M[R[rs]+SignExtImm]
             case 0x2b: /* sw */ StoreWord(reg[rt], reg[rs]+simm);
                 checkBubble(rt);
