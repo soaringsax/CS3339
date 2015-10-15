@@ -13,7 +13,7 @@ static int mem[MEMSIZE / 4];
 // expected values
 //int cycles=728752,bubbles=253239,flushes=25995;
 int cycles=5,bubbles=0,flushes=0;
-bool flush=false;
+int flush=0;
 
 //if any, is the destination of the instructions in the pipeline.
 int destReg[6];
@@ -83,7 +83,7 @@ void addToPipeline(int readyAt,int outputReg){
      The jr, j, and jal instructions are always followed by one flush cycle (stall). The beq and bne instructions are followed by one flush cycle only if they are taken.
      */
     if (flush){
-        flush=false;
+        flush=0;
         flushes++;
         for (int i=0;i<6;i++)
             increment();
@@ -186,7 +186,7 @@ static void Interpret(int start)
                     case 0x03: /* sra */ reg[rd] = reg[rs] >> shamt;
                         checkBubble(rs); addToPipeline(2,rd);
                         break;// R[rd]=R[rs]≫>shamt
-                    case 0x08: /* jr */ pc = reg[rs]; flush=true;
+                    case 0x08: /* jr */ pc = reg[rs]; flush=1;
                         checkBubble(rs); addToPipeline(2,CONSTPC);
                         break;// PC=R[rs]
                     case 0x10: /* mfhi */ reg[rd] = hi;
@@ -212,19 +212,19 @@ static void Interpret(int start)
                 }
                 break;
             case 0x02: /* j */ pc = (pc & 0xf0000000) + addr*4;
-                flush=true; addToPipeline(2,CONSTPC) ;break;// PC=JumpAddr
+                flush=1; addToPipeline(2,CONSTPC) ;break;// PC=JumpAddr
             case 0x03: /* jal */ reg[31] = pc; pc = (pc & 0xf0000000) + addr * 4;
-                flush=true; addToPipeline(1,31); break;// R[31]=PC+4; PC=JumpAddr
+                flush=1; addToPipeline(1,31); break;// R[31]=PC+4; PC=JumpAddr
             case 0x04: /* beq */
                 if(reg[rs]==reg[rt]){
                     pc=pc+(simm<<2);
-                    flush=true;
+                    flush=1;
                 }
                 addToPipeline(2,CONSTPC); break;// if(R[rs]==R[rt]) PC=PC+4+BranchAddr
             case 0x05: /* bne */
                 if(reg[rs]!=reg[rt]){
                     pc=pc+(simm<<2);
-                    flush=true;
+                    flush=1;
                 }
                 checkBubble(rs); checkBubble(rt); addToPipeline(2,CONSTPC); break;// TODO if(R[rs]!=R[rt]) PC=PC+4+BranchAddr
             case 0x09: /* addiu */ reg[rt] = reg[rs] + simm;
