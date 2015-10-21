@@ -305,10 +305,12 @@ static void Interpret(int start)
     printf("bubbles = %d\n",bubbles);
     printf("flushes = %d\n",flushes);
     
+    /*
     if(count == (cycles - 5 - bubbles - flushes)){
         printf("Check passed\n");
     }
     else printf("Check failed, %d ≠ %d - 5 - %d - %d\n",count, cycles, bubbles, flushes);
+     */
 }
 
 int main(int argc, char *argv[])
